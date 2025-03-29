@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CodeCollab</title>
+    <script src="https://unpkg.com/monaco-editor@0.30.1/min/vs/loader.js"></script>
+</head>
+<body>
+    <div id="editor" style="width: 800px; height: 600px; border: 1px solid grey"></div>
+    <script>
+        const sessionId = window.location.hash.slice(1) || crypto.randomUUID();
+        const ws = new WebSocket(`ws://${window.location.host}/ws/${sessionId}`);
+
+        require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor@0.30.1/min/vs' }});
+        require(['vs/editor/editor.main'], () => {
+            const editor = monaco.editor.create(document.getElementById('editor'), {
+                value: "# Start coding!\n",
+                language: 'python'
+            });
+
+            ws.onmessage = (e) => {
+                if (e.data.startsWith("SYNC:")) {
+                    editor.setValue(e.data.split(":", 1)[1]);
+                }
+            };
+
+            editor.onDidChangeModelContent(() => {
+                ws.send(`UPDATE:${editor.getValue()}`);
+            });
+        });
+    </script>
+</body>
+</html>
